@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: typescript-api-ingress
+  labels:
+    app: typescript-api
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # Add SSL certificate annotation if you have one
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  # ingressClassName: nginx  # Uncomment if using nginx ingress controller
+  rules:
+  - host: api.yourdomain.com  # Replace with your actual domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: typescript-api-service
+            port:
+              number: 80
+  # Uncomment the following section if you have SSL certificates
+  # tls:
+  # - hosts:
+  #   - api.yourdomain.com
+  #   secretName: typescript-api-tls

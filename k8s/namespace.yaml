@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: typescript-api
+  labels:
+    name: typescript-api
+    environment: production
