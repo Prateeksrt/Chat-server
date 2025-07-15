@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: typescript-api-config
+  labels:
+    app: typescript-api
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  # Add any other configuration variables here
+  API_VERSION: "v1"
+  LOG_LEVEL: "info"

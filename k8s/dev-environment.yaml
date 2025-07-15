@@ -1,18 +1,58 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: typescript-api-dev
+  labels:
+    name: typescript-api-dev
+    environment: development
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: typescript-api-config-dev
+  namespace: typescript-api-dev
+  labels:
+    app: typescript-api
+    environment: development
+data:
+  NODE_ENV: "development"
+  PORT: "3000"
+  API_VERSION: "v1"
+  LOG_LEVEL: "debug"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: typescript-api-secrets-dev
+  namespace: typescript-api-dev
+  labels:
+    app: typescript-api
+    environment: development
+type: Opaque
+data:
+  JWT_SECRET: "ZGV2LWp3dC1zZWNyZXQ="  # dev-jwt-secret
+  DATABASE_URL: "ZGV2LWRhdGFiYXNlLXVybA=="  # dev-database-url
+  API_KEY: "ZGV2LWFwaS1rZXk="  # dev-api-key
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: typescript-api
+  name: typescript-api-dev
+  namespace: typescript-api-dev
   labels:
     app: typescript-api
+    environment: development
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: typescript-api
+      environment: development
   template:
     metadata:
       labels:
         app: typescript-api
+        environment: development
     spec:
       containers:
       - name: typescript-api
@@ -21,9 +61,9 @@ spec:
         - containerPort: 3000
         envFrom:
         - configMapRef:
-            name: typescript-api-config
+            name: typescript-api-config-dev
         - secretRef:
-            name: typescript-api-secrets
+            name: typescript-api-secrets-dev
         env:
         - name: POD_NAME
           valueFrom:
@@ -35,11 +75,11 @@ spec:
               fieldPath: metadata.namespace
         resources:
           requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
             memory: "128Mi"
             cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
         livenessProbe:
           httpGet:
             path: /health
@@ -56,24 +96,21 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
-        startupProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 30
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: typescript-api-service
+  name: typescript-api-service-dev
+  namespace: typescript-api-dev
+  labels:
+    app: typescript-api
+    environment: development
 spec:
   selector:
     app: typescript-api
+    environment: development
   ports:
     - protocol: TCP
       port: 80
       targetPort: 3000
-  type: LoadBalancer
+  type: ClusterIP
