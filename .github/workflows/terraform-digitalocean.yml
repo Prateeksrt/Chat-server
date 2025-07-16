@@ -1,0 +1,189 @@
+name: Terraform DigitalOcean Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      action:
+        description: 'Terraform action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      region:
+        description: 'DigitalOcean region'
+        required: true
+        default: 'nyc1'
+        type: choice
+        options:
+          - nyc1
+          - nyc3
+          - sfo2
+          - sfo3
+          - ams2
+          - ams3
+          - fra1
+          - lon1
+          - sgp1
+          - tor1
+      domain_name:
+        description: 'Domain name (optional, for production)'
+        required: false
+        type: string
+        default: ''
+
+env:
+  TF_VERSION: "1.5.0"
+  TF_WORKING_DIR: "./terraform"
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        if: ${{ github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply' }}
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          TF_VAR_cloud_provider: "digitalocean"
+          TF_VAR_environment: ${{ github.event.inputs.environment }}
+          TF_VAR_region: ${{ github.event.inputs.region }}
+          TF_VAR_domain_name: ${{ github.event.inputs.domain_name }}
+
+      - name: Terraform Validate
+        run: terraform validate
+        if: ${{ github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply' }}
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan \
+            -var="cloud_provider=digitalocean" \
+            -var="environment=${{ github.event.inputs.environment }}" \
+            -var="region=${{ github.event.inputs.region }}" \
+            -var="domain_name=${{ github.event.inputs.domain_name }}" \
+            -out=tfplan
+        if: ${{ github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply' }}
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Terraform Apply
+        if: ${{ github.event.inputs.action == 'apply' }}
+        run: terraform apply -auto-approve tfplan
+        env:
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+
+      - name: Terraform Destroy
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        run: terraform destroy -auto-approve
+        env:
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event.inputs.action == 'plan' }}
+        with:
+          name: terraform-plan
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+
+      - name: Comment Plan Results
+        if: ${{ github.event.inputs.action == 'plan' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('${{ env.TF_WORKING_DIR }}/tfplan', 'utf8');
+            const comment = `## Terraform Plan Results
+            
+            **Environment:** ${{ github.event.inputs.environment }}
+            **Region:** ${{ github.event.inputs.region }}
+            **Action:** ${{ github.event.inputs.action }}
+            
+            \`\`\`hcl
+            ${plan}
+            \`\`\`
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  security-scan:
+    name: 'Security Scan'
+    runs-on: ubuntu-latest
+    needs: terraform
+    if: ${{ github.event.inputs.action == 'apply' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  notify:
+    name: 'Notify'
+    runs-on: ubuntu-latest
+    needs: [terraform, security-scan]
+    if: always()
+    
+    steps:
+      - name: Notify on Success
+        if: ${{ needs.terraform.result == 'success' && needs.security-scan.result == 'success' }}
+        run: |
+          echo "✅ Terraform deployment completed successfully!"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Region: ${{ github.event.inputs.region }}"
+          echo "Action: ${{ github.event.inputs.action }}"
+
+      - name: Notify on Failure
+        if: ${{ needs.terraform.result == 'failure' || needs.security-scan.result == 'failure' }}
+        run: |
+          echo "❌ Terraform deployment failed!"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Region: ${{ github.event.inputs.region }}"
+          echo "Action: ${{ github.event.inputs.action }}"
+          exit 1
