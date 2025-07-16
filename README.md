@@ -81,6 +81,60 @@ docker run -p 3000:3000 -e NODE_ENV=production typescript-api-prod
 docker-compose up --build
 ```
 
+## ☁️ Cloud Deployment with Terraform
+
+This project includes comprehensive Terraform configurations for deploying to multiple cloud providers (AWS, Azure, GCP).
+
+### Quick Deploy
+
+```bash
+# Deploy to AWS dev environment
+cd terraform
+./deploy.sh -e dev -p aws -b
+
+# Deploy to Azure staging environment
+./deploy.sh -e staging -p azure -b
+
+# Deploy to GCP production environment
+./deploy.sh -e prod -p gcp -b
+
+# Deploy to DigitalOcean dev environment
+./deploy.sh -e dev -p digitalocean -b
+
+### Supported Cloud Providers
+
+- **AWS**: ECS Fargate with Application Load Balancer
+- **Azure**: Container Instances with Load Balancer  
+- **GCP**: Cloud Run with Global Load Balancer
+- **DigitalOcean**: App Platform with Container Registry
+
+### Prerequisites
+
+1. **Terraform** (>= 1.0)
+2. **Docker** (for building images)
+3. **Cloud CLI tools**:
+   - AWS CLI (for AWS)
+   - Azure CLI (for Azure)
+   - Google Cloud SDK (for GCP)
+   - DigitalOcean CLI (doctl) (for DigitalOcean)
+
+### Manual Deployment
+
+```bash
+cd terraform
+
+# Initialize Terraform
+terraform init
+
+# Plan deployment
+terraform plan -var-file=environments/dev.tfvars
+
+# Apply changes
+terraform apply -var-file=environments/dev.tfvars
+```
+
+For detailed instructions, see the [Terraform README](terraform/README.md).
+
 ## 📚 API Documentation
 
 ### Base URL
