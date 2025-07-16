@@ -58,7 +58,7 @@ clean:
 
 # Deploy with build (default: dev)
 deploy:
-	./deploy.sh -e dev -p aws -b
+	./deploy.sh -e dev -p digitalocean -b
 
 # Environment-specific commands
 plan-dev: validate
@@ -115,6 +115,16 @@ deploy-gcp-staging:
 
 deploy-gcp-prod:
 	./deploy.sh -e prod -p gcp -b
+
+# DigitalOcean deployments
+deploy-digitalocean-dev:
+	./deploy.sh -e dev -p digitalocean -b
+
+deploy-digitalocean-staging:
+	./deploy.sh -e staging -p digitalocean -b
+
+deploy-digitalocean-prod:
+	./deploy.sh -e prod -p digitalocean -b
 
 # Show outputs
 output:

@@ -9,6 +9,7 @@ The infrastructure is designed to be cloud-agnostic and supports:
 - **AWS**: ECS Fargate with Application Load Balancer
 - **Azure**: Container Instances with Load Balancer
 - **GCP**: Cloud Run with Global Load Balancer
+- **DigitalOcean**: App Platform with Container Registry
 
 ### Common Components
 
@@ -44,6 +45,7 @@ terraform/
    - AWS CLI (for AWS)
    - Azure CLI (for Azure)
    - Google Cloud SDK (for GCP)
+   - DigitalOcean CLI (doctl) (for DigitalOcean)
 
 ### 1. Configure Cloud Credentials
 
@@ -64,6 +66,11 @@ gcloud auth login
 gcloud config set project <project-id>
 ```
 
+#### DigitalOcean
+```bash
+doctl auth init
+```
+
 ### 2. Deploy Infrastructure
 
 Use the deployment script for easy deployment:
@@ -77,7 +84,9 @@ Use the deployment script for easy deployment:
 
 # Deploy to GCP production environment
 ./deploy.sh -e prod -p gcp -b
-```
+
+# Deploy to DigitalOcean dev environment
+./deploy.sh -e dev -p digitalocean -b
 
 ### 3. Manual Deployment
 
@@ -126,6 +135,9 @@ Each environment has its own `.tfvars` file in the `environments/` directory:
 - `org_id` - GCP organization ID
 - `alert_email` - Email for monitoring alerts
 
+#### DigitalOcean
+- `domain_name` - Domain name for the application (optional, for production)
+
 ## 🌐 Cloud Provider Details
 
 ### AWS
@@ -149,6 +161,13 @@ Each environment has its own `.tfvars` file in the `environments/` directory:
 - **Monitoring**: Cloud Monitoring
 - **Networking**: VPC with subnets
 
+### DigitalOcean
+- **Compute**: App Platform (serverless containers)
+- **Load Balancer**: App Platform built-in load balancer
+- **Registry**: Container Registry (DOCR)
+- **Monitoring**: DigitalOcean Monitoring
+- **Networking**: App Platform managed networking
+
 ## 📊 Monitoring and Logging
 
 ### Health Checks
@@ -158,11 +177,13 @@ All deployments include health checks at `/health` endpoint.
 - **AWS**: CloudWatch Logs
 - **Azure**: Application Insights + Storage
 - **GCP**: Cloud Logging + Storage
+- **DigitalOcean**: App Platform logs + Spaces
 
 ### Monitoring
 - **AWS**: CloudWatch Metrics
 - **Azure**: Application Insights
 - **GCP**: Cloud Monitoring
+- **DigitalOcean**: DigitalOcean Monitoring
 
 ## 🔄 Deployment Workflow
 

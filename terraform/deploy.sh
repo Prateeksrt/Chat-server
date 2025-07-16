@@ -35,7 +35,7 @@ show_usage() {
     echo ""
     echo "Options:"
     echo "  -e, --environment ENV    Environment to deploy (dev, staging, prod) [default: dev]"
-    echo "  -p, --provider PROVIDER  Cloud provider (aws, azure, gcp) [default: aws]"
+    echo "  -p, --provider PROVIDER  Cloud provider (aws, azure, gcp, digitalocean) [default: aws]"
     echo "  -r, --region REGION      Cloud region [default: us-east-1]"
     echo "  -b, --build              Build and push Docker image"
     echo "  -d, --destroy            Destroy infrastructure"
@@ -45,6 +45,7 @@ show_usage() {
     echo "  $0 -e dev -p aws -b                    # Deploy to AWS dev with build"
     echo "  $0 -e staging -p azure                 # Deploy to Azure staging"
     echo "  $0 -e prod -p gcp -b                   # Deploy to GCP prod with build"
+    echo "  $0 -e dev -p digitalocean -b           # Deploy to DigitalOcean dev with build"
     echo "  $0 -e dev -d                           # Destroy dev infrastructure"
 }
 
@@ -97,8 +98,8 @@ if [[ ! "$ENVIRONMENT" =~ ^(dev|staging|prod)$ ]]; then
 fi
 
 # Validate provider
-if [[ ! "$PROVIDER" =~ ^(aws|azure|gcp)$ ]]; then
-    print_error "Invalid provider: $PROVIDER. Must be aws, azure, or gcp."
+if [[ ! "$PROVIDER" =~ ^(aws|azure|gcp|digitalocean)$ ]]; then
+    print_error "Invalid provider: $PROVIDER. Must be aws, azure, gcp, or digitalocean."
     exit 1
 fi
 
@@ -166,6 +167,23 @@ build_and_push_image() {
             # Build and push
             docker build -t "gcr.io/$PROJECT_ID/${PROJECT_NAME}:latest" ..
             docker push "gcr.io/$PROJECT_ID/${PROJECT_NAME}:latest"
+            ;;
+            
+        digitalocean)
+            # Get container registry URL
+            REGISTRY_URL=$(terraform output -raw digitalocean_container_registry_url 2>/dev/null || echo "")
+            if [[ -z "$REGISTRY_URL" ]]; then
+                print_error "DigitalOcean container registry URL not found. Run terraform apply first."
+                exit 1
+            fi
+            
+            # Login to DigitalOcean Container Registry
+            print_status "Logging in to DigitalOcean Container Registry..."
+            doctl registry login
+            
+            # Build and push
+            docker build -t "${REGISTRY_URL}/${PROJECT_NAME}:latest" ..
+            docker push "${REGISTRY_URL}/${PROJECT_NAME}:latest"
             ;;
     esac
     

@@ -15,6 +15,10 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 4.0"
     }
+    digitalocean = {
+      source  = "digitalocean/digitalocean"
+      version = "~> 2.0"
+    }
   }
 
   backend "local" {
@@ -24,12 +28,12 @@ terraform {
 
 # Variables
 variable "cloud_provider" {
-  description = "Cloud provider to use (aws, azure, gcp)"
+  description = "Cloud provider to use (aws, azure, gcp, digitalocean)"
   type        = string
   default     = "aws"
   validation {
-    condition     = contains(["aws", "azure", "gcp"], var.cloud_provider)
-    error_message = "Cloud provider must be one of: aws, azure, gcp."
+    condition     = contains(["aws", "azure", "gcp", "digitalocean"], var.cloud_provider)
+    error_message = "Cloud provider must be one of: aws, azure, gcp, digitalocean."
   }
 }
 
@@ -92,6 +96,10 @@ provider "google" {
   project = var.project_name
   region  = var.region
   alias   = "main"
+}
+
+provider "digitalocean" {
+  alias = "main"
 }
 
 # Outputs

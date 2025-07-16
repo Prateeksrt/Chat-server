@@ -97,13 +97,16 @@ cd terraform
 
 # Deploy to GCP production environment
 ./deploy.sh -e prod -p gcp -b
-```
+
+# Deploy to DigitalOcean dev environment
+./deploy.sh -e dev -p digitalocean -b
 
 ### Supported Cloud Providers
 
 - **AWS**: ECS Fargate with Application Load Balancer
 - **Azure**: Container Instances with Load Balancer  
 - **GCP**: Cloud Run with Global Load Balancer
+- **DigitalOcean**: App Platform with Container Registry
 
 ### Prerequisites
 
@@ -113,6 +116,7 @@ cd terraform
    - AWS CLI (for AWS)
    - Azure CLI (for Azure)
    - Google Cloud SDK (for GCP)
+   - DigitalOcean CLI (doctl) (for DigitalOcean)
 
 ### Manual Deployment
 
